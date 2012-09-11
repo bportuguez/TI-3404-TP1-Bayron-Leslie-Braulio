@@ -132,20 +132,21 @@ int servidor()
 
 int main()
 {
-	printf("Por favor digite 0 para servidor o 1 para cliente \n");
-	int type;
-	scanf("%i",type);
+printf("Por favor digite 0 para servidor o 1 para cliente \n");
+int type;
+scanf("%i",type);
+int idProceso;
+idProceso=fork();
+ if(idProceso==0){
+	  
+		 cliente();
+	 }
+
+ else {
 	 
-	if (type==1)
-	{
-		cliente();
-	}
-	else
-	{
-		servidor();
-	}
+	
+	 servidor();
+		 	 }
+
+
 }
-
-
-
-
