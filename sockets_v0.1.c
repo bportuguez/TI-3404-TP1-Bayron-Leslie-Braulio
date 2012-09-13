@@ -1,5 +1,4 @@
 /* tcpclient.c */
-
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -9,144 +8,147 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
+#include <wait.h>
 
-int cliente()
 
-{
+int cliente(int PuertoCliente,char IpCliente[20]){       
+        int sock;
+        char Datos_Enviados [1024];
+        struct hostent *host; // Estructura hostent que contiene informacion 
+        struct sockaddr_in server_addr;   //Estructuras de sockets direcciones 
+		host = gethostbyname(IpCliente);
 
-        int sock, bytes_recieved;  
-        char Datos_Enviados[1024],Datos_Recibidos[1024];
-        struct hostent *host;
-        struct sockaddr_in server_addr;  
-
-        host = gethostbyname("127.0.0.1");
-
-        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
-		{
-			perror("Error no se puede establecer el socket");
-        	exit(1);
+        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) // Funcion que abre el sockets o despcriptor
+        { 
+            perror("Error al abrir el socket");
+            exit(1);
         }
 
-        server_addr.sin_family = AF_INET;     
-        server_addr.sin_port = htons(5000);   
+        server_addr.sin_family = AF_INET;   //variable de tipo struct sockaddr_in. contiene un código de la familia de direcciones.  
+        server_addr.sin_port = htons(PuertoCliente); //  convertir el puertocliete en de bytes de red el puerto 
         server_addr.sin_addr = *((struct in_addr *)host->h_addr);
-        bzero(&(server_addr.sin_zero),8); 
-
-        if (connect(sock, (struct sockaddr *)&server_addr,sizeof(struct sockaddr)) == -1) 
-        {
-			perror("Error al intentar conectarse");
-        	exit(1);
-        }
-
+        bzero(&(server_addr.sin_zero),8);  //establece todos los valores del búfer a cero. 
+        
         while(1)
         {
-        	bytes_recieved=recv(sock,Datos_Recibidos,1024,0);
-        	Datos_Recibidos[bytes_recieved] = '\0';
+		   if (connect(sock, (struct sockaddr *)&server_addr,sizeof(struct sockaddr)) == -1) { 
+				
+				}
+				else
+				{
+					break;
+				}
+		 }
+   
+        
 
-			printf("\ Datos Recibidos = %s " , Datos_Recibidos);
+        while(1) //Ciclo que envia datos 
+        {  
+			printf("\n \E[1;36m YO \E[0;36m (Adios para cerrar el MSN) :");
+			fflush(stdout); //Limpia el buffer 
+			gets(Datos_Enviados); // Captura el dato
            
-			gets(Datos_Enviados);
-
-			send(sock,Datos_Enviados,strlen(Datos_Enviados), 0);
-        }
-		return 0;
+		   if (strcmp(Datos_Enviados, "adios") != 0 || strcmp(Datos_Enviados, "Adios") != 0) // verifica si se envia adios 
+			   send(sock,Datos_Enviados,strlen(Datos_Enviados), 0); 
+			
+		   else
+		   {                                                 // Si es el array adios manda el datos y cierra el socket
+			   send(sock,Datos_Enviados,strlen(Datos_Enviados), 0);  
+			   close(sock);
+			   break;
+		   }
+       }
+       return 0;
 }
 
-/* tcpserver.c */
-int servidor()
+int servidor(int PuertoServer)
 {
-	int sock, connected, bytes_recieved , true = 1;  
-        char Datos_Enviados[1024] , Datos_Recibidos[1024];       
-
-        struct sockaddr_in server_addr,client_addr;    
+      
+        int sock, connected, Bytes_Recibidos, true = 1;  
+        char Datos_Recibidos[1024];       
+		struct sockaddr_in server_addr,client_addr;    
         int sin_size;
         
-        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
-		{
-        	perror("Error no se puede establecer el socket");
-			exit(1);
+        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)  // Funcion que abre el sockets o despcriptor
+        {
+            perror("Error en la creación del sockte");
+            exit(1);
         }
 
-        if (setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&true,sizeof(int)) == -1) 
-		{
-            perror("Setsockopt");
+        if (setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&true,sizeof(int)) == -1) //Configura el socket.
+        {  
+            perror("Error en la configuración del socket");
             exit(1);
         }
         
-        server_addr.sin_family = AF_INET;         
-        server_addr.sin_port = htons(5000);     
-        server_addr.sin_addr.s_addr = INADDR_ANY; 
-        bzero(&(server_addr.sin_zero),8); 
+        server_addr.sin_family = AF_INET; //variable de tipo struct sockaddr_in. contiene un código de la familia de direcciones.        
+        server_addr.sin_port = htons(PuertoServer); //  convertir el puertocliete en de bytes de red el puerto    
+        server_addr.sin_addr.s_addr = INADDR_ANY; //  Este campo contiene la dirección IP del servidor
+        bzero(&(server_addr.sin_zero),8); // //establece todos los valores del búfer a cero. 
 
-        if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) 
-		{
-            perror("Error en la funcion bind");
+        if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr))== -1) // Intenta conectarse a la direccion host y realizar bien sino tira error
+        { 
+            perror("Error en el bind al intentar conectarse");
             exit(1);
         }
 
-        if (listen(sock, 5) == -1) 
-		{
-            perror("Error a la hora de recibir conexion");
+        if (listen(sock, 3) == -1)// Escucha o espera a que si hay alguna peticion de conectarse 
+        { 
+            perror("Error al recibir peticion de conexion");
             exit(1);
         }
 		
-		printf("\ Esperando conexiones en el puerto numero 5000");
-        fflush(stdout);
+		printf("\nEsperando la conexion en el puerto  %i   \n ",PuertoServer);
+        
 
-        while(1)
-        {  
+		while(1){  
+			sin_size = sizeof(struct sockaddr_in);
+			connected = accept(sock, (struct sockaddr *)&client_addr,&sin_size); //Acepta la coneccion 
+			printf("\n Se establecio la conexion (%s , %d)\n",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
+		
+            while (1)// Ciclo que permite la recrpción de datos 
+            {  
+				//printf("\n \E[1;36m  Yo \E[0;36m (Adios para cerrar el MSN) : ");
+				Bytes_Recibidos = recv(connected,Datos_Recibidos,1024,0); // Recibe los bytes de red 
+				Datos_Recibidos[Bytes_Recibidos] = '\0'; 
 
-            sin_size = sizeof(struct sockaddr_in);
+				if (strcmp(Datos_Recibidos, "adios") == 0 || strcmp(Datos_Recibidos , "Adios") == 0)  // Verifica que lo recibido es un adios
+				{
+					close(connected);
+					break;
+				}
 
-            connected = accept(sock, (struct sockaddr *)&client_addr,&sin_size);
+				printf("\n \E[1;33m Otro Usuario = \E[0;33m %s \n " , Datos_Recibidos);
+				fflush(stdout); //Limpia el Buffer
+          }
+          break;
+      }       
+	  close(sock); // Cierra sockets
+      return 0;
+} 
 
-            printf("\n Esta conectado con la ip %s y el puerto %d ",inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
+int main(){
+int PuertoServer,PuertoCliente; // Variable para almacenar el pueto de cliente y el del servidor
+char PuertoS[5],PuertoC[5];     // Variable que almacenan temporamente los puertos para luego castear
+char IpCliente[20];
+printf("\E[0;34m Bienvenido al MSM \nPor favor ingrese el Puerto del servidor \n");
+gets(PuertoS);
+printf("Por favor ingrese la Ip \n");
+PuertoServer=atoi(PuertoS);
+gets(IpCliente);
+printf("Por favor ingrese el Puerto del cliente \n");
+gets(PuertoC);
 
-            while (1)
-            {
-				gets(Datos_Enviados);
-
-				send(connected, Datos_Enviados,strlen(Datos_Enviados), 0);  
-
-            	bytes_recieved = recv(connected,Datos_Recibidos,1024,0);
-
-            	Datos_Recibidos[bytes_recieved] = '\0';
-
-            	printf("\n Datos Recibidos = %s " , Datos_Recibidos);
-            	fflush(stdout);
-            }
-        }       
-		close(sock);
-      	return 0;
-}
-
-int main()
-{
-printf("Por favor digite 0 para servidor o 1 para cliente \n");
-int type;
-scanf("%i",type);
+PuertoCliente=atoi(PuertoC);
 int idProceso;
-idProceso=fork();
- if(idProceso==0){
-	  
-		 cliente();
+idProceso=fork(); // Se lleva acabo la duplicación de procesos mediante el fock
+ if(idProceso==0 ){
+		 cliente(PuertoCliente,IpCliente); // LLamada a la función cliente con los parametros de Puerto y IP
 	 }
-
  else {
-	 
-	
-	 servidor();
+	 servidor(PuertoServer); // Llamada a la función servidor con los parametros Puerto y Nombre
+	 	 
 		 	 }
-
-
+      return 0;  
 }
